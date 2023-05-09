@@ -3,17 +3,27 @@ library(tidyverse)
 library(pdftools)
 library(hablar)
 library(janitor)
+library(activityinfo)
+
+# data source -------------------------------------------------------------
 
 
 panama_stat <- read_html("https://www.migracion.gob.pa/inicio/estadisticas", encoding = "UTF-8")
-
-
 
 url_panama_stat <- panama_stat |> 
   html_element("a[href*='DARIÉN']") |> 
   html_attr("href")
 
+activityinfo_form_region <- "chuhmcylhgte6oj5"
+activityinfo_form_gender <- "cidnyerlhgvytng2"
+activityinfo_form_country <- "cu48r06lhgw2ngz2"
+activityinfo_form_age <- "ccfjt47lhgw5tjw2"
+  
+  
+# read pdf ----------------------------------------------------------------
+
 pages <- pdf_text(paste0("https://www.migracion.gob.pa/", url_panama_stat))
+
 
 
 # url_panama_stat <- panama_stat |> 
@@ -103,9 +113,32 @@ df_region_2023 <- data_2023$data[[1]] |>
   ) |> 
   select(-c(`Región`, month)) |> 
   filter(!is.na(value)) |> 
-  select(year, month_eng, region_eng, value)
+  transmute(
+    year,
+    month = month_eng,
+    region = region_eng,
+    people = value,
+    source = "Panama - SENAFRONT"
+  )
 
-write_csv(df_region_2023, 'data-wrangle/df_region_2023.csv')
+
+# check for duplicates ----------------------------------------------------
+
+online_df_region <- getRecords(activityinfo_form_region) |> 
+  select(year, month, region, people, source) |> 
+  as_tibble()
+
+df_region_2023 <- df_region_2023 |> 
+  anti_join(online_df_region)
+
+
+# send data to activityinfo -----------------------------------------------
+
+if (nrow(df_region_2023) > 0) importRecords(formId = activityinfo_form_region, df_region_2023, stageDirect = TRUE)
+
+
+
+# write_csv(df_region_2023, 'data-wrangle/df_region_2023.csv')
 
 
 
@@ -142,13 +175,34 @@ df_gender_2023 <- data_2023$data[[2]] |>
   filter(!is.na(value)) |> 
   select(-c(gender, month)) |> 
   pivot_wider(names_from = gender_eng, values_from = value) |> 
-  select(year, month_eng, men, women, total)
+  transmute(year, 
+         month = month_eng, 
+         men, 
+         women, 
+         total,
+         source = "Panama - SENAFRONT")
+
+# check for duplicates ----------------------------------------------------
+
+online_df_gender <- getRecords(activityinfo_form_gender) |> 
+  select(year, month, men, women, total, source) |> 
+  as_tibble()
 
 
-write_csv(df_gender_2023, 'data-wrangle/df_gender_2023.csv')
+df_gender_2023 <- df_gender_2023 |> 
+  anti_join(online_df_gender)
+
+
+# send data to activityinfo -----------------------------------------------
+
+if (nrow(df_gender_2023) > 0) importRecords(formId = activityinfo_form_gender, df_gender_2023, stageDirect = TRUE)
 
 
 
+# write_csv(df_gender_2023, 'data-wrangle/df_gender_2023.csv')
+
+
+# Country -----------------------------------------------------------------
 
 df_country_2023 <- data_2023$data[[3]] |> 
   row_to_names(row_number = 1) |> 
@@ -178,12 +232,28 @@ df_country_2023 <- data_2023$data[[3]] |>
   year = cy) |> 
   mutate(`País` = trimws(gsub("[[:punct:]]|[[:digit:]]", "", `País`))) |> 
   select(-c(month)) |> 
-  select(year, 
-         month_eng, 
+  transmute(year, 
+         month = month_eng, 
          country = `País`,
-         value)
+         people = value,
+         source = "Panama - SENAFRONT")
 
-write_csv(df_country_2023, 'data-wrangle/df_country_2023.csv')
+# check for duplicates ----------------------------------------------------
+
+online_df_country <- getRecords(activityinfo_form_country) |> 
+  select(year, month, country, people, source) |> 
+  as_tibble() 
+
+
+df_country_2023 <- df_country_2023 |> 
+  anti_join(online_df_country)
+
+
+# send data to activityinfo -----------------------------------------------
+
+if (nrow(df_country_2023) > 0) importRecords(formId = activityinfo_form_country, df_country_2023, stageDirect = TRUE)
+
+# write_csv(df_country_2023, 'data-wrangle/df_country_2023.csv')
 
 
 
@@ -218,33 +288,30 @@ df_age_2023 <- data_2023$data[[4]] |>
                              TRUE ~ NA_character_)) |> 
   select(-c(age, month)) |> 
   pivot_wider(names_from = age_eng, values_from = value) |> 
-  select(year, month_eng, adults, minors, total)
-
-write_csv(df_age_2023, 'data-wrangle/df_age_2023.csv')
-
-
-
-
-
+  transmute(year, 
+         month = month_eng, 
+         adults, 
+         minors, 
+         total,
+         source = "Panama - SENAFRONT")
 
 
+# check for duplicates ----------------------------------------------------
+
+online_df_age <- getRecords(activityinfo_form_age) |> 
+  select(year, month, adults, minors, total, source) |> 
+  as_tibble() 
 
 
+df_age_2023 <- df_age_2023 |> 
+  anti_join(online_df_age)
 
 
+# send data to activityinfo -----------------------------------------------
+
+if (nrow(df_age_2023) > 0) importRecords(formId = activityinfo_form_age, df_age_2023, stageDirect = TRUE)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+# write_csv(df_age_2023, 'data-wrangle/df_age_2023.csv')
 
 
