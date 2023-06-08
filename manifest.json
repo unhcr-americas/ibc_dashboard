@@ -83,7 +83,7 @@
       "description": {
         "Package": "MASS",
         "Priority": "recommended",
-        "Version": "7.3-58.4",
+        "Version": "7.3-58.3",
         "Date": "2023-04-04",
         "Revision": "$Rev: 3618 $",
         "Depends": "R (>= 4.3.0), grDevices, graphics, stats, utils",
