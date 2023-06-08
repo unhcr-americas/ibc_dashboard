@@ -38,3 +38,4 @@ source(file = "R/USA - CBP encounters.R")
 ```
 
 
+<!-- rsconnect::writeManifest(appPrimaryDoc = "report.rmd") -->
