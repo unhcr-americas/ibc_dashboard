@@ -1,0 +1,40 @@
+---
+title: "IBC Dashboard"
+output: html_document
+date: "2023-06-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source(file = "R/fun.R")
+```
+
+
+## Colombia
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+# Total
+source(file = "R/Colombia - Maritime company data - Total.R")
+
+# Nationality
+source(file = "R/Colombia - Maritime company data - Nationality.R")
+
+```
+
+
+## Panama
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+source(file = "R/Panama - Irregular entries in Darien.R")
+```
+
+
+## USA
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+source(file = "R/USA - CBP encounters.R")
+```
+
+

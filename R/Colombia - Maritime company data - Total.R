@@ -5,9 +5,11 @@ library(activityinfo)
 # data source -------------------------------------------------------------
 
 url <- "https://docs.google.com/spreadsheets/d/e/2PACX-1vRP7KhswbG3dgklLdNFB9OPcadfD5-aQ-86Lx80NdEbN1oLBX8A6bUQfUXDNBDSJeiAZi3yP4DAb2Na/pubchart?oid=1174121648&format=interactive"
-activityinfo_form <- "c3z54hulhgoreh32"
-  
-  # extract data ------------------------------------------------------------
+activityinfo_form_daily <- "c3z54hulhgoreh32"
+activityinfo_form_monthly <- "cdxcl1alibuu1vw3"
+
+
+# extract data ------------------------------------------------------------
 
 
 r <- GET(url) |> content(as = "text")
@@ -19,39 +21,72 @@ chart_json <- str_replace_all(str_match(r, "'chartJson': '(.+?)'")[,2],
                                 "\\\\x5d" = "]",
                                 "\\\\x7d" = "}")) |> jsonlite::fromJSON()
 
-# arrange data ------------------------------------------------------------
+# arrange daily data ------------------------------------------------------
 
-
-data <-
+data_daily <-
   map_dfr(chart_json$dataTable$rows$c, 
           ~tibble(col_type = chart_json$dataTable$cols$type, 
                   n = .$f)) |> 
-    mutate(date = n) |> 
-    mutate(date = if_else(col_type  == "date", date, NA)) |> 
-    mutate(n = if_else(col_type  == "number", n, NA)) |> 
-    fill(date) |> 
-    filter(!is.na(n)) |> 
-    transmute(date = lubridate::dmy(date), 
+  mutate(date = n) |> 
+  mutate(date = if_else(col_type  == "date", date, NA)) |> 
+  mutate(n = if_else(col_type  == "number", n, NA)) |> 
+  fill(date) |> 
+  filter(!is.na(n)) |> 
+  transmute(date = lubridate::dmy(date), 
             people = as.numeric(n),
             source = "GIFMM - Maritime company data")
 
 
+
+
+# arrange monthly data ----------------------------------------------------
+
+data_monthly <-
+  map_dfr(chart_json$dataTable$rows$c, 
+          ~tibble(col_type = chart_json$dataTable$cols$type, 
+                  n = .$f)) |> 
+  mutate(date = n) |> 
+  mutate(date = if_else(col_type  == "date", date, NA)) |> 
+  mutate(n = if_else(col_type  == "number", n, NA)) |> 
+  fill(date) |> 
+  filter(!is.na(n)) |> 
+  transmute(date = lubridate::dmy(date), 
+            people = as.numeric(n),
+            source = "GIFMM - Maritime company data") |> 
+  group_by(date = lubridate::floor_date(date, "month"), source) |> 
+  summarise(people = sum(people, na.rm = TRUE)) |> 
+  select(date,
+         people,
+         source)
+
+
 # check for duplicates ----------------------------------------------------
 
-online_df <- getRecords(activityinfo_form) |> 
+online_df_daily <- getRecords(activityinfo_form_daily) |> 
   select(date, people, source) |> 
-  mutate(date = lubridate::ymd(date)) |> 
-  as_tibble() 
+  as_tibble() |> 
+  mutate(date = lubridate::ymd(date))
 
-data <- data |> 
-  anti_join(online_df)
+
+data_daily <- data_daily |> 
+  anti_join(online_df_daily)
+
+
+online_df_monthly <- getRecords(activityinfo_form_monthly) |> 
+  select(date, people, source)  |> 
+  as_tibble() |> 
+  mutate(date = lubridate::ymd(date))
+
+
+data_monthly <- data_monthly |> 
+  anti_join(online_df_monthly)
 
 
 # send data to activityinfo -----------------------------------------------
 
-if (nrow(data) > 0) importRecords(formId = activityinfo_form, data, stageDirect = TRUE)
+if (nrow(data_daily) > 0) importRecords(formId = activityinfo_form_daily, data_daily, stageDirect = TRUE)
 
-
+if (nrow(data_monthly) > 0) importRecords(formId = activityinfo_form_monthly, data_monthly, stageDirect = TRUE)
 
 
 

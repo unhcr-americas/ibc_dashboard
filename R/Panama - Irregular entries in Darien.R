@@ -5,6 +5,11 @@ library(hablar)
 library(janitor)
 library(activityinfo)
 
+# function ----------------------------------------------------------------
+
+source(file = "R/fun.R")
+
+
 # data source -------------------------------------------------------------
 
 
@@ -114,6 +119,7 @@ df_region_2023 <- data_2023$data[[1]] |>
   select(-c(`Región`, month)) |> 
   filter(!is.na(value)) |> 
   transmute(
+    date = as.character(as_date(paste0("01-",month_eng,"-",year), format = "%d-%B-%Y")),
     year,
     month = month_eng,
     region = region_eng,
@@ -125,8 +131,8 @@ df_region_2023 <- data_2023$data[[1]] |>
 # check for duplicates ----------------------------------------------------
 
 online_df_region <- getRecords(activityinfo_form_region) |> 
-  select(year, month, region, people, source) |> 
-  as_tibble()
+  select(date, year, month, region, people, source) |> 
+  as_tibble() 
 
 df_region_2023 <- df_region_2023 |> 
   anti_join(online_df_region)
@@ -148,7 +154,7 @@ df_gender_2023 <- data_2023$data[[2]] |>
   map_df(str_replace, pattern = "-", replacement = "") |> 
   retype() |> 
   arrange(desc(Total)) |> 
-  rename(gender = `Condición`) |> 
+  rename(gender = 1) |> 
   select(-c(Total)) |>
   group_by(gender) |> 
   summarise(across(where(is.numeric), sum, na.rm = TRUE)) |> 
@@ -175,17 +181,19 @@ df_gender_2023 <- data_2023$data[[2]] |>
   filter(!is.na(value)) |> 
   select(-c(gender, month)) |> 
   pivot_wider(names_from = gender_eng, values_from = value) |> 
-  transmute(year, 
-         month = month_eng, 
-         men, 
-         women, 
-         total,
-         source = "Panama - SENAFRONT")
+  transmute(
+    date = as.character(as_date(paste0("01-",month_eng,"-",year), format = "%d-%B-%Y")),
+    year, 
+    month = month_eng,
+    men, 
+    women, 
+    total,
+    source = "Panama - SENAFRONT")
 
 # check for duplicates ----------------------------------------------------
 
 online_df_gender <- getRecords(activityinfo_form_gender) |> 
-  select(year, month, men, women, total, source) |> 
+  select(date, year, month, men, women, total, source) |> 
   as_tibble()
 
 
@@ -232,16 +240,20 @@ df_country_2023 <- data_2023$data[[3]] |>
   year = cy) |> 
   mutate(`País` = trimws(gsub("[[:punct:]]|[[:digit:]]", "", `País`))) |> 
   select(-c(month)) |> 
-  transmute(year, 
-         month = month_eng, 
-         country = `País`,
-         people = value,
-         source = "Panama - SENAFRONT")
+  transmute(
+    date = as.character(as_date(paste0("01-",month_eng,"-",year), format = "%d-%B-%Y")),
+    year, 
+    month = month_eng, 
+    country = `País`,
+    iso3c = isoccode(country, src = "panama", origin = "spanish"),
+    people = value,
+    source = "Panama - SENAFRONT")
+
 
 # check for duplicates ----------------------------------------------------
 
 online_df_country <- getRecords(activityinfo_form_country) |> 
-  select(year, month, country, people, source) |> 
+  select(date, year, month, country, iso3c, people, source) |> 
   as_tibble() 
 
 
@@ -288,18 +300,20 @@ df_age_2023 <- data_2023$data[[4]] |>
                              TRUE ~ NA_character_)) |> 
   select(-c(age, month)) |> 
   pivot_wider(names_from = age_eng, values_from = value) |> 
-  transmute(year, 
-         month = month_eng, 
-         adults, 
-         minors, 
-         total,
-         source = "Panama - SENAFRONT")
+  transmute(
+    date = as.character(as_date(paste0("01-",month_eng,"-",year), format = "%d-%B-%Y")),
+    year, 
+    month = month_eng, 
+    adults, 
+    minors, 
+    total,
+    source = "Panama - SENAFRONT")
 
 
 # check for duplicates ----------------------------------------------------
 
 online_df_age <- getRecords(activityinfo_form_age) |> 
-  select(year, month, adults, minors, total, source) |> 
+  select(date, year, month, adults, minors, total, source) |> 
   as_tibble() 
 
 
